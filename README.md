@@ -23,6 +23,9 @@
 
 - model_testing: A Streamlit web application that integrates the trained DSSM and ChromaDB. It analyzes user resumes, identifies skill gaps for desired jobs, and recommends relevant courses, leveraging both pre-computed mappings and DSSM insights.
 
+ ### Model Training Results 
+ <img width="3541" height="1768" alt="training_curves" src="https://github.com/user-attachments/assets/f51a0967-f0ae-400a-bad7-41e2a03d9320" />
+
 
 ### Streamlit Interface
 ![career](https://github.com/user-attachments/assets/de39dd6a-7d81-4a6e-9f01-033f97f6f061)
