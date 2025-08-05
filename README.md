@@ -11,6 +11,7 @@
 - Develop an interactive Streamlit application that provides instant career guidance, skill analysis, and course recommendations with a user-friendly interface.
 
 
+
 ### Implementation
 
 - eda_analysis: Analyzes raw job/course data, identifying missing values, performing dataset-specific insights, and conducting initial skill gap analysis via exact matching to inform preprocessing.
@@ -22,6 +23,9 @@
 - model_training: Trains a Deep Structured Semantic Model (DSSM) using ChromaDB embeddings, generating positive/negative pairs for contrastive learning. It employs CosineEmbeddingLoss, EMA(Exponential Moving Averaage) for validation, and early stopping to optimize and save the best model.
 
 - model_testing: A Streamlit web application that integrates the trained DSSM and ChromaDB. It analyzes user resumes, identifies skill gaps for desired jobs, and recommends relevant courses, leveraging both pre-computed mappings and DSSM insights.
+
+### Architecture Diagram
+<img width="1581" height="685" alt="image" src="https://github.com/user-attachments/assets/41760cde-c598-4ba1-b64c-a1edd68e53cb" />
 
  ### Model Training Results 
  <img width="3541" height="1768" alt="training_curves" src="https://github.com/user-attachments/assets/f51a0967-f0ae-400a-bad7-41e2a03d9320" />
