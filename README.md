@@ -1,4 +1,4 @@
-# C3I
+# Centre of Cognitive Computing and Computational Intelligence(C3I)
 
 ### Objective
 
