@@ -32,7 +32,11 @@
 
 
 ### Streamlit Interface
-![career](https://github.com/user-attachments/assets/de39dd6a-7d81-4a6e-9f01-033f97f6f061)
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/aeed60cc-df6a-4c66-991e-1fc874bf1bb9" />
+
+### Course Recommendation
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/ac499f32-0311-41b3-a980-ca52872faf80" />
+
 
 
 
