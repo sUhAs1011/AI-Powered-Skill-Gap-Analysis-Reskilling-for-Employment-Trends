@@ -1,5 +1,15 @@
 # Centre of Cognitive Computing and Computational Intelligence(C3I)
 
+### Key Features 
+
+- Utilized all-MiniLM-L6-v2 to generate and push refined job and course embeddings into ChromaDB for efficient semantic search.
+
+- Employed a Deep Structured Semantic Model (DSSM) for training to learn enhanced semantic relationships.
+
+- Developed a Streamlit web application as a user-friendly frontend interface, facilitating interactive skill gap analysis and course recommendations.
+
+- Provided intelligent course suggestions directly addressing identified skill gaps relevant to a specific job position, leveraging both pre-computed mappings and the trained DSSM.
+
 ### Objective
 
 - Develop a model that extracts skills from user resumes and identifies gaps between current capabilities and target job requirements.
