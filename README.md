@@ -48,6 +48,10 @@
 ### Course Recommendation
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/ef0748d4-d270-4380-9396-cfd040b7b2a8" />
 
+### Invalid Document Upload
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/f8a1f6d8-f265-422a-9575-f169464b7717" />
+
+
 
 
 
