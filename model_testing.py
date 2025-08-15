@@ -65,6 +65,12 @@ def extract_text_from_docx(file):
 def extract_text_with_ocr(image):
     """Extract text from image using OCR."""
     try:
+        # Check if tesseract is available
+        try:
+            pytesseract.get_tesseract_version()
+        except Exception:
+            return None, "Tesseract OCR is not installed. Please install it or use text-based documents instead."
+        
         # Convert PIL image to OpenCV format
         opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
         
@@ -77,10 +83,9 @@ def extract_text_with_ocr(image):
         # Use pytesseract for OCR
         text = pytesseract.image_to_string(thresh, config='--psm 6')
         
-        return text.strip()
+        return text.strip(), None
     except Exception as e:
-        st.error(f"Error in OCR processing: {e}")
-        return None
+        return None, f"Error in OCR processing: {e}"
 
 def extract_text_from_pdf_with_ocr(file):
     """Extract text from PDF using both text extraction and OCR for images."""
@@ -102,9 +107,15 @@ def extract_text_from_pdf_with_ocr(file):
                 img = Image.open(io.BytesIO(img_data))
                 
                 # Use OCR on the image
-                ocr_text = extract_text_with_ocr(img)
-                if ocr_text:
-                    page_text = ocr_text
+                ocr_result = extract_text_with_ocr(img)
+                if ocr_result and isinstance(ocr_result, tuple):
+                    ocr_text, error = ocr_result
+                    if ocr_text:
+                        page_text = ocr_text
+                    elif error:
+                        st.warning(f"OCR warning: {error}")
+                elif ocr_result:  # Handle old format for backward compatibility
+                    page_text = ocr_result
             
             text += page_text + "\n"
         
@@ -117,7 +128,13 @@ def extract_text_from_image(file):
     """Extract text from image file using OCR."""
     try:
         image = Image.open(file)
-        return extract_text_with_ocr(image)
+        ocr_result = extract_text_with_ocr(image)
+        if ocr_result and isinstance(ocr_result, tuple):
+            text, error = ocr_result
+            if error:
+                st.warning(f"OCR warning: {error}")
+            return text
+        return ocr_result
     except Exception as e:
         st.error(f"Error reading image: {e}")
         return None
@@ -152,6 +169,77 @@ def validate_job_search(job_title, client, embedding_model):
         
     except Exception as e:
         return False, f"Error validating job title: {str(e)}"
+
+def is_resume_content(text):
+    """
+    Validates if the extracted text actually contains resume-like content.
+    """
+    if not text or len(text.strip()) < 100:
+        return False, "Text too short to be a resume"
+    
+    # Convert to lowercase for easier pattern matching
+    text_lower = text.lower()
+    
+    # Resume indicators - look for common resume sections and keywords
+    resume_indicators = [
+        'resume', 'cv', 'curriculum vitae', 'professional summary', 'work experience',
+        'employment history', 'education', 'skills', 'qualifications', 'certifications',
+        'professional experience', 'career objective', 'summary of qualifications',
+        'technical skills', 'professional skills', 'work history', 'job experience',
+        'professional background', 'career summary', 'employment record'
+    ]
+    
+    # Check if any resume indicators are present
+    has_resume_indicators = any(indicator in text_lower for indicator in resume_indicators)
+    
+    # Look for common resume patterns - more flexible matching
+    has_contact_info = any(pattern in text_lower for pattern in ['email', 'phone', 'address', 'linkedin', 'contact'])
+    has_work_section = any(pattern in text_lower for pattern in ['experience', 'employment', 'work', 'position', 'role', 'responsibilities', 'job', 'career'])
+    has_education = any(pattern in text_lower for pattern in ['education', 'degree', 'university', 'college', 'school', 'bachelor', 'master', 'phd', 'diploma'])
+    
+    # Check for professional formatting (dates, company names, job titles)
+    has_dates = bool(re.search(r'\b(19|20)\d{2}\b', text))  # Years like 2020, 2021
+    has_company_names = bool(re.search(r'\b(inc|corp|llc|ltd|company|corporation|technologies|solutions|systems|group|team)\b', text_lower))
+    
+    # Calculate a score based on resume indicators
+    score = 0
+    if has_resume_indicators: score += 2
+    if has_contact_info: score += 1
+    if has_work_section: score += 2
+    if has_education: score += 1
+    if has_dates: score += 1
+    if has_company_names: score += 1
+    
+    # Check for irrelevant content that suggests it's not a resume
+    irrelevant_patterns = [
+        'recipe', 'cooking', 'food', 'restaurant', 'menu', 'ingredients', 'instructions',
+        'novel', 'story', 'fiction', 'chapter', 'book', 'literature',
+        'research paper', 'academic paper', 'thesis', 'dissertation',
+        'invoice', 'receipt', 'bill', 'financial statement',
+        'form', 'application', 'contract', 'legal document'
+    ]
+    
+    # Only flag if multiple irrelevant patterns are found (more lenient)
+    irrelevant_count = sum(1 for pattern in irrelevant_patterns if pattern in text_lower)
+    has_irrelevant_content = irrelevant_count >= 2  # Need at least 2 patterns to be considered irrelevant
+    
+    # Final validation
+    if has_irrelevant_content:
+        return False, f"Document appears to contain non-resume content (found {irrelevant_count} irrelevant patterns)"
+    
+    # Additional check: ensure there's enough professional content - more lenient
+    professional_words = ['experience', 'skills', 'education', 'work', 'employment', 'career', 'professional', 'job', 'position', 'role', 'project', 'technology', 'development', 'management', 'analysis']
+    professional_word_count = sum(1 for word in professional_words if word in text_lower)
+    
+    # More lenient professional content requirement
+    if professional_word_count < 2:  # Reduced from 3 to 2
+        return False, f"Document lacks sufficient professional content (found {professional_word_count} professional terms). Please upload a proper resume."
+    
+    # Reduced score requirement from 4 to 3
+    if score >= 3:  # More lenient scoring
+        return True, f"Resume validation passed (score: {score}/7, professional terms: {professional_word_count})"
+    else:
+        return False, f"Document doesn't appear to be a resume (score: {score}/7). Please upload a proper resume document."
 
 def extract_skills_from_resume(text):
     """
@@ -732,9 +820,13 @@ st.set_page_config(page_title="Career Copilot", layout="wide", initial_sidebar_s
 st.title("🚀 Career Copilot: Your Skill & Course Advisor")
 st.markdown("""
 Welcome to Career Copilot! This tool helps you bridge the gap between your current skills and your dream job.
-1.  *Upload your resume* (PDF or DOCX).
-2.  *Enter a job title* you're interested in.
-3.  We'll analyze the required skills, identify any gaps, and recommend relevant courses to help you succeed.
+
+**How it works:**
+1.  **Upload your resume** (PDF, DOCX, or scanned image) - Must be a professional resume document
+2.  **Enter a job title** you're interested in
+3.  We'll analyze your skills, identify gaps, and recommend relevant courses
+
+**Important:** Only upload actual resume documents containing work experience, education, and skills. Other documents will be rejected.
 """)
 
 # --- Sidebar for User Inputs ---
@@ -742,11 +834,51 @@ with st.sidebar:
     st.header("Step 1: Your Information")
     
     # Resume Upload
-    resume_file = st.file_uploader("Upload Your Resume", type=["pdf", "docx", "png", "jpg", "jpeg"])
+    st.subheader("📄 Resume Upload")
+    resume_file = st.file_uploader(
+        "Upload Your Resume", 
+        type=["pdf", "docx", "png", "jpg", "jpeg"],
+        help="Upload a professional resume document (PDF, DOCX, or scanned image). The document should contain work experience, education, and skills."
+    )
     
     # OCR Toggle
-    use_ocr = st.checkbox("Use OCR for better text extraction", value=True, 
-                          help="Enable OCR to extract text from scanned PDFs or images. Recommended for better skill detection.")
+    try:
+        pytesseract.get_tesseract_version()
+        ocr_available = True
+        ocr_help = "Enable OCR to extract text from scanned PDFs or images. Recommended for better skill detection."
+    except Exception:
+        ocr_available = False
+        ocr_help = "⚠️ OCR not available - Tesseract not installed. Install Tesseract for image text extraction."
+    
+    use_ocr = st.checkbox("Use OCR for better text extraction", value=ocr_available, 
+                          help=ocr_help, disabled=not ocr_available)
+    
+    if not ocr_available:
+        st.warning("""
+        **OCR Not Available**: Tesseract OCR is not installed on your system.
+        
+        **To enable OCR:**
+        - **Windows**: Download and install from https://github.com/UB-Mannheim/tesseract/wiki
+        - **Mac**: `brew install tesseract`
+        - **Linux**: `sudo apt-get install tesseract-ocr`
+        
+        **Alternative**: Use PDF or DOCX files with embedded text instead of scanned images.
+        """)
+    
+    # Resume validation info
+    st.info("""
+    **Resume Requirements:**
+    - Must contain work experience or employment history
+    - Should include education background
+    - Must have skills and qualifications
+    - Should contain contact information
+    - Minimum 100 characters of text
+    
+    **File Format Support:**
+    - **PDF/DOCX**: Best support, text extraction works reliably
+    - **Images (PNG/JPG)**: Requires Tesseract OCR installation
+    - **Scanned PDFs**: OCR recommended for better accuracy
+    """)
     
     # Job Title Input
     job_title_input = st.text_input("Enter Desired Job Title", placeholder="e.g., Senior Data Scientist")
@@ -787,14 +919,25 @@ if analyze_button and resume_file and job_title_input:
     
     # 1. Process Resume
     st.header("📄 Your Resume Analysis")
+    
+    # Check file size - resumes should typically be at least a few KB
+    if resume_file.size < 1024:  # Less than 1KB
+        st.warning("⚠️ **File Size Warning**: This file is very small and may not contain a complete resume.")
+        st.info("Typical resume files are 5KB - 2MB. Very small files might be incomplete or contain minimal content.")
+    
     resume_text = ""
     
     with st.spinner("Extracting text from your resume..."):
         if resume_file.type == "application/pdf":
-            if use_ocr:
+            if use_ocr and ocr_available:
                 resume_text = extract_text_from_pdf_with_ocr(resume_file)
                 if resume_text:
                     st.success("✅ Text extracted using OCR for better accuracy")
+                else:
+                    st.warning("⚠️ OCR extraction failed, falling back to text extraction")
+                    resume_text = extract_text_from_pdf(resume_file)
+                    if resume_text:
+                        st.success("✅ Text extracted from PDF (fallback method)")
             else:
                 resume_text = extract_text_from_pdf(resume_file)
                 if resume_text:
@@ -806,15 +949,55 @@ if analyze_button and resume_file and job_title_input:
                 st.success("✅ Text extracted from DOCX")
                 
         elif resume_file.type in ["image/png", "image/jpeg", "image/jpg"]:
-            if use_ocr:
+            if use_ocr and ocr_available:
                 resume_text = extract_text_from_image(resume_file)
                 if resume_text:
                     st.success("✅ Text extracted from image using OCR")
+                else:
+                    st.error("❌ Failed to extract text from image")
+                    st.info("**Possible solutions:**")
+                    st.info("1. Install Tesseract OCR (see instructions above)")
+                    st.info("2. Use a PDF or DOCX file instead")
+                    st.info("3. Ensure the image contains clear, readable text")
+                    st.stop()
             else:
-                st.warning("Please enable OCR to extract text from images")
+                st.error("❌ Cannot process image files without OCR")
+                st.info("**To process images:**")
+                st.info("1. Install Tesseract OCR (see instructions above)")
+                st.info("2. Or convert your image to PDF/DOCX format")
+                st.info("3. Or use a text-based document instead")
                 st.stop()
 
     if resume_text:
+        # Validate that the extracted text is actually resume content
+        is_valid_resume, validation_message = is_resume_content(resume_text)
+        
+        # Debug mode - show detailed validation results
+        with st.expander("🔍 Debug: Resume Validation Details"):
+            st.write("**Validation Results:**")
+            st.write(f"- Text length: {len(resume_text.strip())} characters")
+            st.write(f"- Contains 'resume' keywords: {'resume' in resume_text.lower() or 'cv' in resume_text.lower()}")
+            st.write(f"- Contains 'experience' keywords: {'experience' in resume_text.lower() or 'work' in resume_text.lower()}")
+            st.write(f"- Contains 'education' keywords: {'education' in resume_text.lower() or 'degree' in resume_text.lower()}")
+            st.write(f"- Contains 'skills' keywords: {'skills' in resume_text.lower()}")
+            st.write(f"- Contains dates: {bool(re.search(r'\\b(19|20)\\d{2}\\b', resume_text))}")
+            st.write(f"- Validation message: {validation_message}")
+        
+        if not is_valid_resume:
+            st.error("❌ *Invalid Document*")
+            st.warning(validation_message)
+            st.markdown("""
+            **Please upload a proper resume document that contains:**
+            - Work experience or employment history
+            - Education background
+            - Skills and qualifications
+            - Contact information
+            """)
+            st.stop()
+        
+        # Show validation success
+        st.success(f"✅ {validation_message}")
+        
         # Show extracted text for debugging
         with st.expander("🔍 Debug: Extracted Text (First 500 chars)"):
             st.text(resume_text[:500] + "..." if len(resume_text) > 500 else resume_text)
@@ -833,6 +1016,13 @@ if analyze_button and resume_file and job_title_input:
 
     else:
         st.error("Failed to read the resume file. Please try a different file.")
+        st.markdown("""
+        **Common issues:**
+        - File is corrupted or password-protected
+        - File is too large (>50MB)
+        - File contains only images without text
+        - File is not a resume document
+        """)
 
     # Placeholder for next steps
     if resume_text and user_skills:
