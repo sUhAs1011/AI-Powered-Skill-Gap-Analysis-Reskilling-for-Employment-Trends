@@ -42,7 +42,8 @@
 
 
 ### Streamlit Interface
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/aeed60cc-df6a-4c66-991e-1fc874bf1bb9" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/31d20d53-f02e-4599-8981-0e9c1c504087" />
+
 
 ### Course Recommendation
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/ac499f32-0311-41b3-a980-ca52872faf80" />
