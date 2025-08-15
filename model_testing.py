@@ -294,8 +294,7 @@ def extract_skills_from_resume(text):
             Operations|Process\sImprovement|Quality\sAssurance|Six\sSigma|Lean|Kaizen|
             Workflow|Automation|Efficiency|Optimization|Standardization|
             # Qualifications and certifications
-            Certification|Qualification|Degree|Bachelor|Master|PhD|MBA|CPA|PMP|PHR|
-            AWS\sCertified|Azure\sCertified|Google\sCloud|CISSP|CEH|CompTIA
+            Certification|Qualification|AWS\sCertified|Azure\sCertified|Google\sCloud|CISSP|CEH|CompTIA
         )\b
     """
     
@@ -365,164 +364,75 @@ def extract_skills_from_resume(text):
     # Combine all skills
     all_skills = technical_skills + business_skills + relevant_multi_words
     
-    # Filter out generic words and irrelevant terms that are not actual skills
-    generic_words = {
-        # Generic job-related words
-        'position', 'responsibility', 'duty', 'task', 'work', 'job', 'role',
-        'function', 'purpose', 'objective', 'goal', 'target', 'aim',
-        'requirement', 'need', 'demand', 'expectation', 'standard',
-        'quality', 'performance', 'efficiency', 'effectiveness',
-        'experience', 'knowledge', 'ability', 'capability',
-        'competency', 'proficiency', 'expertise', 'mastery',
-        'innovation', 'creativity', 'problem', 'solution', 'approach',
-        'method', 'technique', 'strategy', 'plan', 'process',
-        
-        # Food and culinary terms
-        'savoury', 'food', 'beverage', 'cooking', 'culinary',
-        
-        # Personal information
-        'years', 'month', 'day', 'time', 'date', 'location', 'address',
-        'phone', 'email', 'contact', 'reference', 'resume', 'cv',
-        
-        # Irrelevant technical terms
-        'sem', 'alarm', 'burglar', 'system', 'using', 'powered',
-        'skill', 'gap', 'analysis', 'education', 'healthcare',
-        
-        # Common OCR artifacts
-        'page', 'section', 'header', 'footer', 'title', 'subtitle',
-        'bullet', 'point', 'list', 'item', 'number', 'letter',
-        
-        # Resume formatting terms
-        'summary', 'objective', 'profile', 'background', 'overview',
-        'highlights', 'achievements', 'accomplishments', 'responsibilities',
-        
-        # Generic business terms
-        'company', 'organization', 'department', 'team', 'group',
-        'project', 'initiative', 'program', 'campaign', 'effort',
-        
-        # Time-related terms
-        'duration', 'period', 'timeline', 'schedule', 'deadline',
-        'start', 'end', 'begin', 'finish', 'complete', 'ongoing',
-        
-        # Location and contact terms
-        'location', 'address', 'city', 'state', 'country', 'region',
-        'remote', 'onsite', 'hybrid', 'travel', 'relocation',
-        
-        # Education and certification terms
-        'degree', 'certificate', 'diploma', 'license', 'accreditation',
-        'graduation', 'enrollment', 'attendance', 'completion',
-        
-        # Generic action words
-        'developed', 'created', 'implemented', 'managed', 'led',
-        'coordinated', 'facilitated', 'supported', 'assisted', 'helped',
-        'improved', 'enhanced', 'optimized', 'streamlined', 'reduced',
-        'increased', 'maintained', 'monitored', 'tracked', 'analyzed',
-        'researched', 'investigated', 'evaluated', 'assessed', 'reviewed',
-        
-        # Additional irrelevant terms from your examples
-        'best', 'practice', 'role', 'rotational', 'shift', 'strict', 'adherence',
-        'position', 'shift', 'rotation', 'strict', 'adherence', 'compliance',
-        'policy', 'procedure', 'guideline', 'standard', 'protocol',
-        'requirement', 'mandatory', 'obligatory', 'compulsory', 'essential',
-        'necessary', 'important', 'critical', 'vital', 'crucial',
-        'primary', 'secondary', 'tertiary', 'main', 'major', 'minor',
-        'senior', 'junior', 'entry', 'level', 'mid', 'senior', 'lead',
-        'principal', 'associate', 'assistant', 'coordinator', 'specialist',
-        'expert', 'consultant', 'advisor', 'analyst', 'technician',
-        'operator', 'administrator', 'supervisor', 'manager', 'director',
-        'executive', 'officer', 'representative', 'agent', 'associate',
-        'member', 'participant', 'contributor', 'stakeholder', 'partner',
-        'collaborator', 'colleague', 'peer', 'subordinate', 'superior',
-        'report', 'direct', 'indirect', 'matrix', 'functional', 'line',
-        'staff', 'support', 'service', 'maintenance', 'operation',
-        'production', 'manufacturing', 'assembly', 'quality', 'control',
-        'assurance', 'testing', 'validation', 'verification', 'inspection',
-        'audit', 'review', 'assessment', 'evaluation', 'appraisal',
-        'feedback', 'input', 'output', 'result', 'outcome', 'impact',
-        'effect', 'influence', 'contribution', 'value', 'benefit',
-        'advantage', 'disadvantage', 'pro', 'con', 'positive', 'negative',
-        'good', 'bad', 'excellent', 'poor', 'average', 'above', 'below',
-        'high', 'low', 'medium', 'moderate', 'extreme', 'intense',
-        'mild', 'strong', 'weak', 'powerful', 'effective', 'efficient',
-        'productive', 'successful', 'unsuccessful', 'failed', 'succeeded',
-        'achieved', 'accomplished', 'completed', 'finished', 'done',
-        'ongoing', 'continuous', 'regular', 'periodic', 'occasional',
-        'frequent', 'rare', 'common', 'uncommon', 'typical', 'atypical',
-        'normal', 'abnormal', 'standard', 'non-standard', 'custom',
-        'default', 'optional', 'mandatory', 'required', 'necessary',
-        'essential', 'important', 'critical', 'vital', 'crucial',
-        'primary', 'secondary', 'tertiary', 'main', 'major', 'minor'
-    }
-    
-    # Normalize and filter skills
-    processed_skills = []
+    # Enhanced filtering to remove non-skill terms
+    filtered_skills = []
     for skill in all_skills:
         skill_lower = skill.lower().strip()
         
-        # Skip if it's in generic words
-        if skill_lower in generic_words:
+        # Skip if it's too short
+        if len(skill_lower) <= 2:
             continue
             
-        # Skip if it's too short or is a number
-        if len(skill_lower) <= 2 or skill_lower.isdigit():
+        # Skip if it's a number or date
+        if skill_lower.isdigit() or re.match(r'^\d{4}$', skill_lower):  # Years like 2023
             continue
             
-        # Skip if it contains generic words (for multi-word skills)
-        skill_words = skill_lower.split()
-        if any(word in generic_words for word in skill_words):
+        # Skip if it's a month name
+        months = ['january', 'february', 'march', 'april', 'may', 'june', 
+                 'july', 'august', 'september', 'october', 'november', 'december',
+                 'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+        if skill_lower in months:
             continue
             
-        # Skip if it's a generic phrase (contains words like "skill", "expert", "advanced", etc.)
-        generic_phrase_words = [
-            'skill', 'expert', 'advanced', 'basic', 'intermediate', 'beginner', 'professional', 
-            'senior', 'junior', 'level', 'proficiency', 'competency', 'capability', 'ability', 
-            'knowledge', 'experience', 'expertise', 'mastery', 'proficiency', 'competence', 
-            'qualification', 'certification', 'degree', 'diploma', 'certificate', 'license', 
-            'accreditation', 'requirement', 'solution', 'technology', 'business', 'role',
-            'position', 'function', 'duty', 'task', 'work', 'job', 'responsibility',
-            'purpose', 'objective', 'goal', 'target', 'aim', 'need', 'demand',
-            'expectation', 'standard', 'quality', 'performance', 'efficiency',
-            'effectiveness', 'innovation', 'creativity', 'problem', 'solution',
-            'approach', 'method', 'technique', 'strategy', 'plan', 'process',
-            'company', 'organization', 'department', 'team', 'group', 'project',
-            'initiative', 'program', 'campaign', 'effort', 'duration', 'period',
-            'timeline', 'schedule', 'deadline', 'start', 'end', 'begin', 'finish',
-            'complete', 'ongoing', 'continuous', 'regular', 'periodic', 'occasional',
-            'frequent', 'rare', 'common', 'uncommon', 'typical', 'atypical',
-            'normal', 'abnormal', 'standard', 'non-standard', 'custom', 'default',
-            'optional', 'mandatory', 'required', 'necessary', 'essential', 'important',
-            'critical', 'vital', 'crucial', 'primary', 'secondary', 'tertiary',
-            'main', 'major', 'minor', 'lead', 'principal', 'associate', 'assistant',
-            'coordinator', 'specialist', 'expert', 'consultant', 'advisor', 'analyst',
-            'technician', 'operator', 'administrator', 'supervisor', 'manager',
-            'director', 'executive', 'officer', 'representative', 'agent', 'member',
-            'participant', 'contributor', 'stakeholder', 'partner', 'collaborator',
-            'colleague', 'peer', 'subordinate', 'superior', 'report', 'direct',
-            'indirect', 'matrix', 'functional', 'line', 'staff', 'support',
-            'service', 'maintenance', 'operation', 'production', 'manufacturing',
-            'assembly', 'quality', 'control', 'assurance', 'testing', 'validation',
-            'verification', 'inspection', 'audit', 'review', 'assessment',
-            'evaluation', 'appraisal', 'feedback', 'input', 'output', 'result',
-            'outcome', 'impact', 'effect', 'influence', 'contribution', 'value',
-            'benefit', 'advantage', 'disadvantage', 'pro', 'con', 'positive',
-            'negative', 'good', 'bad', 'excellent', 'poor', 'average', 'above',
-            'below', 'high', 'low', 'medium', 'moderate', 'extreme', 'intense',
-            'mild', 'strong', 'weak', 'powerful', 'effective', 'efficient',
-            'productive', 'successful', 'unsuccessful', 'failed', 'succeeded',
-            'achieved', 'accomplished', 'completed', 'finished', 'done', 'ongoing',
-            'continuous', 'regular', 'periodic', 'occasional', 'frequent', 'rare',
-            'common', 'uncommon', 'typical', 'atypical', 'normal', 'abnormal',
-            'standard', 'non-standard', 'custom', 'default', 'optional',
-            'mandatory', 'required', 'necessary', 'essential', 'important',
-            'critical', 'vital', 'crucial', 'primary', 'secondary', 'tertiary',
-            'main', 'major', 'minor'
-        ]
-        if any(word in skill_lower for word in generic_phrase_words):
+        # Skip if it's a degree level (but keep the actual degree field)
+        degree_levels = ['bachelor', 'master', 'phd', 'associate', 'diploma']
+        if skill_lower in degree_levels:
             continue
             
-        processed_skills.append(skill_lower)
+        # Skip if it's a generic job title
+        generic_job_titles = ['manager', 'director', 'engineer', 'developer', 'analyst', 
+                             'specialist', 'coordinator', 'assistant', 'associate', 'lead']
+        if skill_lower in generic_job_titles:
+            continue
+            
+        # Skip if it's a company type
+        company_types = ['inc', 'corp', 'llc', 'ltd', 'company', 'corporation']
+        if skill_lower in company_types:
+            continue
+            
+        # Skip if it's a location
+        locations = ['city', 'state', 'country', 'region', 'area', 'zone']
+        if skill_lower in locations:
+            continue
+            
+        # Skip if it's a time period
+        time_periods = ['years', 'months', 'weeks', 'days', 'hours', 'minutes']
+        if skill_lower in time_periods:
+            continue
+            
+        # Skip if it's a common resume section header
+        section_headers = ['summary', 'objective', 'profile', 'background', 'overview',
+                          'highlights', 'achievements', 'accomplishments', 'responsibilities',
+                          'education', 'experience', 'skills', 'certifications', 'references']
+        if skill_lower in section_headers:
+            continue
+            
+        # Skip if it's a personal pronoun or common word
+        common_words = ['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
+                       'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before',
+                       'after', 'above', 'below', 'between', 'among', 'within', 'without']
+        if skill_lower in common_words:
+            continue
+            
+        # Skip if it's a single letter or very short abbreviation
+        if len(skill_lower) <= 1 or (len(skill_lower) <= 3 and skill_lower.isupper()):
+            continue
+            
+        # Keep the skill if it passes all filters
+        filtered_skills.append(skill)
     
-    return sorted(list(set(processed_skills)))
+    # Remove duplicates and sort
+    return sorted(list(set(filtered_skills)))
 
 # --- DSSM Model Definition ---
 class DSSMModel(nn.Module):
