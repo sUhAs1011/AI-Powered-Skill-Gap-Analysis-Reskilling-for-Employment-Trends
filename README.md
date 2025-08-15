@@ -46,7 +46,8 @@
 
 
 ### Course Recommendation
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/ac499f32-0311-41b3-a980-ca52872faf80" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/ef0748d4-d270-4380-9396-cfd040b7b2a8" />
+
 
 
 
