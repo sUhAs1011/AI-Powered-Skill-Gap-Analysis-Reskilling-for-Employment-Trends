@@ -51,6 +51,10 @@
 ### Invalid Document Upload
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/f8a1f6d8-f265-422a-9575-f169464b7717" />
 
+### Invalid Job Title
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/c9b3b9cd-f551-46eb-a657-273a918eebba" />
+
+
 
 
 
