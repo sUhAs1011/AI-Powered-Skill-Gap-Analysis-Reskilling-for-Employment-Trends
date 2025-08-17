@@ -192,16 +192,20 @@ def is_resume_content(text):
     # Check if any resume indicators are present
     has_resume_indicators = any(indicator in text_lower for indicator in resume_indicators)
     
-    # Look for common resume patterns - more flexible matching
-    has_contact_info = any(pattern in text_lower for pattern in ['email', 'phone', 'address', 'linkedin', 'contact'])
-    has_work_section = any(pattern in text_lower for pattern in ['experience', 'employment', 'work', 'position', 'role', 'responsibilities', 'job', 'career'])
-    has_education = any(pattern in text_lower for pattern in ['education', 'degree', 'university', 'college', 'school', 'bachelor', 'master', 'phd', 'diploma'])
+    # Look for common resume patterns - more efficient matching
+    contact_patterns = ['email', 'phone', 'address', 'linkedin', 'contact']
+    work_patterns = ['experience', 'employment', 'work', 'position', 'role', 'responsibilities', 'job', 'career']
+    education_patterns = ['education', 'degree', 'university', 'college', 'school', 'diploma']
     
-    # Check for professional formatting (dates, company names, job titles)
+    has_contact_info = any(pattern in text_lower for pattern in contact_patterns)
+    has_work_section = any(pattern in text_lower for pattern in work_patterns)
+    has_education = any(pattern in text_lower for pattern in education_patterns)
+    
+    # Check for professional formatting (dates, company names)
     has_dates = bool(re.search(r'\b(19|20)\d{2}\b', text))  # Years like 2020, 2021
     has_company_names = bool(re.search(r'\b(inc|corp|llc|ltd|company|corporation|technologies|solutions|systems|group|team)\b', text_lower))
     
-    # Calculate a score based on resume indicators
+    # Calculate a score based on resume indicators (max 10 points)
     score = 0
     if has_resume_indicators: score += 2
     if has_contact_info: score += 1
@@ -209,6 +213,22 @@ def is_resume_content(text):
     if has_education: score += 1
     if has_dates: score += 1
     if has_company_names: score += 1
+    
+    # Additional scoring criteria for more granular assessment
+    # Check for skills section
+    has_skills_section = any(pattern in text_lower for pattern in ['skills', 'technical skills', 'professional skills', 'competencies', 'expertise'])
+    if has_skills_section: score += 1
+    
+    # Check for certifications
+    has_certifications = any(pattern in text_lower for pattern in ['certification', 'certified', 'certificate', 'license', 'accreditation'])
+    if has_certifications: score += 1
+    
+    # Check for project experience
+    has_projects = any(pattern in text_lower for pattern in ['project', 'portfolio', 'achievement', 'accomplishment', 'deliverable'])
+    if has_projects: score += 1
+    
+    # Ensure score doesn't exceed maximum
+    score = min(score, 10)
     
     # Check for irrelevant content that suggests it's not a resume
     irrelevant_patterns = [
@@ -227,19 +247,22 @@ def is_resume_content(text):
     if has_irrelevant_content:
         return False, f"Document appears to contain non-resume content (found {irrelevant_count} irrelevant patterns)"
     
-    # Additional check: ensure there's enough professional content - more lenient
+    # Additional check: ensure there's enough professional content - more efficient
     professional_words = ['experience', 'skills', 'education', 'work', 'employment', 'career', 'professional', 'job', 'position', 'role', 'project', 'technology', 'development', 'management', 'analysis']
-    professional_word_count = sum(1 for word in professional_words if word in text_lower)
+    
+    # More efficient counting using set intersection
+    text_words = set(text_lower.split())
+    professional_word_count = len(text_words.intersection(set(professional_words)))
     
     # More lenient professional content requirement
     if professional_word_count < 2:  # Reduced from 3 to 2
         return False, f"Document lacks sufficient professional content (found {professional_word_count} professional terms). Please upload a proper resume."
     
-    # Reduced score requirement from 4 to 3
-    if score >= 3:  # More lenient scoring
-        return True, f"Resume validation passed (score: {score}/7, professional terms: {professional_word_count})"
+    # Score requirement for 10-point scale
+    if score >= 5:  # Need at least 5/10 to pass
+        return True, f"Resume validation passed (score: {score}/10, professional terms: {professional_word_count})"
     else:
-        return False, f"Document doesn't appear to be a resume (score: {score}/7). Please upload a proper resume document."
+        return False, f"Document doesn't appear to be a resume (score: {score}/10). Please upload a proper resume document."
 
 def extract_skills_from_resume(text):
     """
@@ -892,6 +915,55 @@ if analyze_button and resume_file and job_title_input:
             st.write(f"- Contains 'skills' keywords: {'skills' in resume_text.lower()}")
             st.write(f"- Contains dates: {bool(re.search(r'\\b(19|20)\\d{2}\\b', resume_text))}")
             st.write(f"- Validation message: {validation_message}")
+            
+            # Show scoring breakdown
+            st.write("**Scoring Breakdown:**")
+            text_lower = resume_text.lower()
+            resume_indicators = ['resume', 'cv', 'curriculum vitae', 'professional summary', 'work experience', 'employment history', 'education', 'skills']
+            has_resume_indicators = any(indicator in text_lower for indicator in resume_indicators)
+            has_contact_info = any(pattern in text_lower for pattern in ['email', 'phone', 'address', 'linkedin', 'contact'])
+            has_work_section = any(pattern in text_lower for pattern in ['experience', 'employment', 'work', 'position', 'role', 'responsibilities', 'job', 'career'])
+            has_education = any(pattern in text_lower for pattern in ['education', 'degree', 'university', 'college', 'school', 'diploma'])
+            has_dates = bool(re.search(r'\\b(19|20)\\d{2}\\b', resume_text))
+            has_company_names = bool(re.search(r'\\b(inc|corp|llc|ltd|company|corporation|technologies|solutions|systems|group|team)\\b', text_lower))
+            
+            score = 0
+            if has_resume_indicators: 
+                score += 2
+                st.write(f"- Resume indicators: +2 points (Total: {score})")
+            if has_contact_info: 
+                score += 1
+                st.write(f"- Contact info: +1 point (Total: {score})")
+            if has_work_section: 
+                score += 2
+                st.write(f"- Work section: +2 points (Total: {score})")
+            if has_education: 
+                score += 1
+                st.write(f"- Education: +1 point (Total: {score})")
+            if has_dates: 
+                score += 1
+                st.write(f"- Dates: +1 point (Total: {score})")
+            if has_company_names: 
+                score += 1
+                st.write(f"- Company names: +1 point (Total: {score})")
+            
+            # Additional scoring criteria
+            has_skills_section = any(pattern in text_lower for pattern in ['skills', 'technical skills', 'professional skills', 'competencies', 'expertise'])
+            if has_skills_section: 
+                score += 1
+                st.write(f"- Skills section: +1 point (Total: {score})")
+            
+            has_certifications = any(pattern in text_lower for pattern in ['certification', 'certified', 'certificate', 'license', 'accreditation'])
+            if has_certifications: 
+                score += 1
+                st.write(f"- Certifications: +1 point (Total: {score})")
+            
+            has_projects = any(pattern in text_lower for pattern in ['project', 'portfolio', 'achievement', 'accomplishment', 'deliverable'])
+            if has_projects: 
+                score += 1
+                st.write(f"- Project experience: +1 point (Total: {score})")
+            
+            st.write(f"**Final Score: {score}/10**")
         
         if not is_valid_resume:
             st.error("❌ *Invalid Document*")
@@ -1107,3 +1179,4 @@ elif analyze_button:
 
 st.markdown("---")
 st.markdown("Powered by DSSM and Streamlit")
+
