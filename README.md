@@ -30,7 +30,7 @@
   
 - populate_chromadb: Generates This script converts the preprocessed text into vector embeddings using 'all-MiniLM-L6-v2' and populates a ChromaDB vector database with these embeddings. It also performs an initial job-to-course similarity mapping, saving the results to a JSON file.
 
-- model_training: Trains a Deep Structured Semantic Model (DSSM) using ChromaDB embeddings, generating positive/negative pairs for contrastive learning. It employs CosineEmbeddingLoss, EMA(Exponential Moving Averaage) for validation, and early stopping to optimize and save the best model.
+- model_training: This script trains a Deep Structured Semantic Model (DSSM) to refine job-course similarity. It uses embeddings from ChromaDB and generates a dataset of positive and negative pairs for training. The training process incorporates an Exponential Moving Average (EMA) and early stopping to save the best-performing model.
 
 - model_testing: A Streamlit web application that integrates the trained DSSM and ChromaDB. It analyzes user resumes, identifies skill gaps for desired jobs, and recommends relevant courses, leveraging both pre-computed mappings and DSSM insights.
 
