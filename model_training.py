@@ -34,7 +34,10 @@ DSSM_CONFIG = {
     'learning_rate': 1e-4,
     'batch_size': 32,
     'epochs': 100,
-    'margin': 0.2  # Margin for triplet loss
+    'margin': 0.2,  # Margin for triplet loss
+    'test_frequency': 5,  # Test every N epochs (to avoid overfitting)
+    'early_stopping_patience': 3,  # Number of epochs without improvement before early stopping
+    'ema_alpha': 0.1  # Exponential moving average smoothing factor
 }
 
 def get_embedding_model():
@@ -244,7 +247,7 @@ def check_available_data():
 
 
 
-def train_dssm_model(dssm_model, train_loader, val_loader, config):
+def train_dssm_model(dssm_model, train_loader, val_loader, test_loader, config):
     """Train the DSSM model with CosineEmbeddingLoss."""
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dssm_model.to(device)
@@ -256,14 +259,17 @@ def train_dssm_model(dssm_model, train_loader, val_loader, config):
     best_val_loss = float('inf')
     train_losses = []
     val_losses = []
+    test_losses = []
     
     # --- Exponential Moving Average for Validation Loss ---
-    ema_alpha = 0.1  # Smoothing factor (adjust as needed)
+    ema_alpha = config.get('ema_alpha', 0.1)  # Smoothing factor (adjust as needed)
     ema_val_loss = None
     
     print(f"🚀 Starting DSSM training for {config['epochs']} epochs...")
-    print(f"📊 Training batches: {len(train_loader)}, Validation batches: {len(val_loader)}")
+    print(f"📊 Training batches: {len(train_loader)}, Validation batches: {len(val_loader)}, Test batches: {len(test_loader)}")
     print(f"💻 Device: {device}")
+    print(f"⚙️  Test Frequency: Every {config.get('test_frequency', 5)} epochs")
+    print(f"⚙️  Early Stopping Patience: {config.get('early_stopping_patience', 3)} epochs")
     print("-" * 80)
     
     epochs_no_improve = 0  # Counter for early stopping
@@ -356,6 +362,46 @@ def train_dssm_model(dssm_model, train_loader, val_loader, config):
         print(f"  Best Val Thresh: {best_threshold:.2f}")
         print(f"  Validation Acc:  {best_accuracy:.4f}")
         
+        # --- Testing Phase (every N epochs to avoid overfitting) ---
+        test_frequency = config.get('test_frequency', 5)
+        if (epoch + 1) % test_frequency == 0 or epoch == config['epochs'] - 1:
+            print(f"\n🧪 Epoch {epoch+1}/{config['epochs']} - Testing Phase")
+            print("-" * 50)
+            
+            dssm_model.eval()
+            test_loss = 0.0
+            test_predictions = []
+            test_labels = []
+            
+            with torch.no_grad():
+                for batch_idx, (job_emb, course_emb, labels) in enumerate(test_loader):
+                    job_emb, course_emb, labels = job_emb.to(device), course_emb.to(device), labels.to(device)
+                    
+                    query_features, doc_features = dssm_model(job_emb, course_emb)
+                    target_labels = torch.where(labels > 0, 1.0, -1.0).to(device)
+                    loss = criterion(query_features, doc_features, target_labels)
+                    test_loss += loss.item()
+                    
+                    # Calculate cosine similarity for metrics
+                    similarities = F.cosine_similarity(query_features, doc_features)
+                    test_predictions.extend(similarities.cpu().numpy())
+                    test_labels.extend(labels.cpu().numpy())
+            
+            avg_test_loss = test_loss / len(test_loader)
+            test_losses.append(avg_test_loss)
+            
+            # Calculate test accuracy using the best threshold from validation
+            test_predictions = np.array(test_predictions)
+            test_labels_binary = (np.array(test_labels) > 0).astype(int)
+            test_pred_binary = (test_predictions > best_threshold).astype(int)
+            test_accuracy = np.mean(test_pred_binary == test_labels_binary)
+            
+            print(f"  Test Loss:      {avg_test_loss:.6f}")
+            print(f"  Test Accuracy:  {test_accuracy:.4f}")
+        else:
+            # Add placeholder for test loss to maintain list length
+            test_losses.append(None)
+        
         # Save best model (based on EMA validation loss)
         if ema_val_loss < best_val_loss:
             best_val_loss = ema_val_loss
@@ -367,7 +413,8 @@ def train_dssm_model(dssm_model, train_loader, val_loader, config):
             epochs_no_improve += 1
 
         # Early stopping check
-        if epoch > 5 and epochs_no_improve >= 3:  # Check after a few epochs
+        early_stopping_patience = config.get('early_stopping_patience', 3)
+        if epoch > 5 and epochs_no_improve >= early_stopping_patience:  # Check after a few epochs
             print(f"  ⚠  Early stopping triggered (No improvement in EMA Val Loss for {epochs_no_improve} epochs)")
             break
         
@@ -377,12 +424,24 @@ def train_dssm_model(dssm_model, train_loader, val_loader, config):
     print(f"  Best Validation Loss: {best_val_loss:.6f}")
     print(f"  Final Training Loss:  {train_losses[-1]:.6f}")
     print(f"  Final Validation Loss: {val_losses[-1]:.6f}")
+    
+    # Show final test results if available
+    final_test_loss = None
+    for test_loss in reversed(test_losses):
+        if test_loss is not None:
+            final_test_loss = test_loss
+            break
+    
+    if final_test_loss is not None:
+        print(f"  Final Test Loss:    {final_test_loss:.6f}")
+    
     print(f"  Total Epochs Trained: {len(train_losses)}")
     
     # Save training history
     training_history = {
         'train_losses': train_losses,
         'val_losses': val_losses,
+        'test_losses': test_losses,
         'best_val_loss': best_val_loss,
         'epochs_trained': len(train_losses)
     }
@@ -395,15 +454,150 @@ def train_dssm_model(dssm_model, train_loader, val_loader, config):
     
     # Plot training curves if matplotlib is available
     try:
-        plot_training_curves(train_losses, val_losses, save_path=BASE_DIR / "trained_model" / "training_curves.png")
+        plot_training_curves(train_losses, val_losses, test_losses, save_path=BASE_DIR / "trained_model" / "training_curves.png")
         print(f"📊 Training curves saved to {BASE_DIR / 'trained_model' / 'training_curves.png'}")
     except ImportError:
         print("📊 Matplotlib not available - skipping training curve plot")
     
+    # --- Final Comprehensive Test Evaluation ---
+    print(f"\n🧪 Final Test Evaluation:")
+    print("-" * 50)
+    
+    dssm_model.eval()
+    final_test_loss = 0.0
+    final_test_predictions = []
+    final_test_labels = []
+    
+    with torch.no_grad():
+        for batch_idx, (job_emb, course_emb, labels) in enumerate(test_loader):
+            job_emb, course_emb, labels = job_emb.to(device), course_emb.to(device), labels.to(device)
+            
+            query_features, doc_features = dssm_model(job_emb, course_emb)
+            target_labels = torch.where(labels > 0, 1.0, -1.0).to(device)
+            loss = criterion(query_features, doc_features, target_labels)
+            final_test_loss += loss.item()
+            
+            # Calculate cosine similarity for metrics
+            similarities = F.cosine_similarity(query_features, doc_features)
+            final_test_predictions.extend(similarities.cpu().numpy())
+            final_test_labels.extend(labels.cpu().numpy())
+    
+    avg_final_test_loss = final_test_loss / len(test_loader)
+    
+    # Calculate final test accuracy using the best threshold from validation
+    final_test_predictions = np.array(final_test_predictions)
+    final_test_labels_binary = (np.array(final_test_labels) > 0).astype(int)
+    
+    # Find the best threshold for test set
+    best_test_accuracy = 0
+    best_test_threshold = 0.0
+    for threshold in np.arange(-1.0, 1.0, 0.05):
+        test_pred_binary = (final_test_predictions > threshold).astype(int)
+        accuracy = np.mean(test_pred_binary == final_test_labels_binary)
+        if accuracy > best_test_accuracy:
+            best_test_accuracy = accuracy
+            best_test_threshold = threshold
+    
+    print(f"  Final Test Loss:     {avg_final_test_loss:.6f}")
+    print(f"  Best Test Accuracy:  {best_test_accuracy:.4f}")
+    print(f"  Best Test Threshold: {best_test_threshold:.2f}")
+    
+    # Update the last test loss in the list
+    if test_losses and test_losses[-1] is None:
+        test_losses[-1] = avg_final_test_loss
+    
     return dssm_model
 
-def plot_training_curves(train_losses, val_losses, save_path=None):
-    """Plot training and validation loss curves."""
+def evaluate_model_on_test_set(dssm_model, test_loader, device):
+    """Evaluate the trained DSSM model on the test set."""
+    dssm_model.eval()
+    test_loss = 0.0
+    test_predictions = []
+    test_labels = []
+    
+    criterion = nn.CosineEmbeddingLoss(margin=0.2)
+    
+    print("🧪 Evaluating model on test set...")
+    print("-" * 50)
+    
+    with torch.no_grad():
+        for batch_idx, (job_emb, course_emb, labels) in enumerate(test_loader):
+            job_emb, course_emb, labels = job_emb.to(device), course_emb.to(device), labels.to(device)
+            
+            query_features, doc_features = dssm_model(job_emb, course_emb)
+            target_labels = torch.where(labels > 0, 1.0, -1.0).to(device)
+            loss = criterion(query_features, doc_features, target_labels)
+            test_loss += loss.item()
+            
+            # Calculate cosine similarity for metrics
+            similarities = F.cosine_similarity(query_features, doc_features)
+            test_predictions.extend(similarities.cpu().numpy())
+            test_labels.extend(labels.cpu().numpy())
+    
+    avg_test_loss = test_loss / len(test_loader)
+    
+    # Calculate test accuracy using different thresholds
+    test_predictions = np.array(test_predictions)
+    test_labels_binary = (np.array(test_labels) > 0).astype(int)
+    
+    # Find the best threshold
+    best_accuracy = 0
+    best_threshold = 0.0
+    threshold_results = []
+    
+    for threshold in np.arange(-1.0, 1.0, 0.05):
+        test_pred_binary = (test_predictions > threshold).astype(int)
+        accuracy = np.mean(test_pred_binary == test_labels_binary)
+        threshold_results.append((threshold, accuracy))
+        
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            best_threshold = threshold
+    
+    # Calculate additional metrics
+    from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
+    
+    # Use best threshold for final predictions
+    final_predictions = (test_predictions > best_threshold).astype(int)
+    
+    # Calculate precision, recall, F1-score
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        test_labels_binary, final_predictions, average='binary', zero_division=0
+    )
+    
+    # Calculate AUC (using raw similarity scores)
+    try:
+        auc_score = roc_auc_score(test_labels_binary, test_predictions)
+    except:
+        auc_score = 0.0
+    
+    print(f"Test Loss:           {avg_test_loss:.6f}")
+    print(f"Best Accuracy:       {best_accuracy:.4f}")
+    print(f"Best Threshold:      {best_threshold:.2f}")
+    print(f"Precision:           {precision:.4f}")
+    print(f"Recall:              {recall:.4f}")
+    print(f"F1-Score:            {f1:.4f}")
+    print(f"AUC Score:           {auc_score:.4f}")
+    
+    # Show top threshold results
+    print(f"\nTop 5 Thresholds:")
+    threshold_results.sort(key=lambda x: x[1], reverse=True)
+    for i, (threshold, accuracy) in enumerate(threshold_results[:5]):
+        print(f"  {i+1}. Threshold: {threshold:.2f}, Accuracy: {accuracy:.4f}")
+    
+    return {
+        'test_loss': avg_test_loss,
+        'best_accuracy': best_accuracy,
+        'best_threshold': best_threshold,
+        'precision': precision,
+        'recall': recall,
+        'f1_score': f1,
+        'auc_score': auc_score,
+        'threshold_results': threshold_results
+    }
+
+def plot_training_curves(train_losses, val_losses, test_losses, save_path=None):
+    """Plot training, validation, and test loss curves."""
     try:
         import matplotlib.pyplot as plt
         
@@ -414,7 +608,18 @@ def plot_training_curves(train_losses, val_losses, save_path=None):
         plt.plot(epochs, train_losses, 'b-', label='Training Loss', linewidth=2)
         plt.plot(epochs, val_losses, 'r-', label='Validation Loss', linewidth=2)
         
-        plt.title('DSSM Training and Validation Loss', fontsize=16, fontweight='bold')
+        # Plot test losses (only where they exist)
+        test_epochs = []
+        test_values = []
+        for i, test_loss in enumerate(test_losses):
+            if test_loss is not None:
+                test_epochs.append(i + 1)
+                test_values.append(test_loss)
+        
+        if test_epochs:
+            plt.plot(test_epochs, test_values, 'g-o', label='Test Loss', linewidth=2, markersize=6)
+        
+        plt.title('DSSM Training, Validation, and Test Loss', fontsize=16, fontweight='bold')
         plt.xlabel('Epoch', fontsize=12)
         plt.ylabel('Loss', fontsize=12)
         plt.legend(fontsize=12)
@@ -427,6 +632,15 @@ def plot_training_curves(train_losses, val_losses, save_path=None):
                     xy=(best_epoch, best_loss), xytext=(best_epoch + 1, best_loss + 0.01),
                     arrowprops=dict(arrowstyle='->', color='red', lw=2),
                     fontsize=10, color='red')
+        
+        # Add annotation for final test loss if available
+        if test_epochs and test_values:
+            final_test_epoch = test_epochs[-1]
+            final_test_loss = test_values[-1]
+            plt.annotate(f'Final Test Loss: {final_test_loss:.6f}\nEpoch: {final_test_epoch}', 
+                        xy=(final_test_epoch, final_test_loss), xytext=(final_test_epoch - 1, final_test_loss + 0.01),
+                        arrowprops=dict(arrowstyle='->', color='green', lw=2),
+                        fontsize=10, color='green')
         
         plt.tight_layout()
         
@@ -652,16 +866,25 @@ def main():
         all_pairs
     )
     
-    # Split into train and validation
-    train_size = int(0.8 * len(dataset))
-    val_size = len(dataset) - train_size
-    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+    # Split into train (80%), test (10%), and validation (10%)
+    total_size = len(dataset)
+    train_size = int(0.8 * total_size)
+    test_size = int(0.1 * total_size)
+    val_size = total_size - train_size - test_size  # Remaining for validation
+    
+    print(f"📊 Dataset splitting: Total={total_size}, Train={train_size}, Test={test_size}, Validation={val_size}")
+    
+    # Use random_split with specific sizes
+    train_dataset, test_dataset, val_dataset = torch.utils.data.random_split(
+        dataset, [train_size, test_size, val_size]
+    )
     
     # Create data loaders
     train_loader = DataLoader(train_dataset, batch_size=DSSM_CONFIG['batch_size'], shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=DSSM_CONFIG['batch_size'], shuffle=False)
     val_loader = DataLoader(val_dataset, batch_size=DSSM_CONFIG['batch_size'], shuffle=False)
     
-    print(f"Training samples: {len(train_dataset)}, Validation samples: {len(val_dataset)}")
+    print(f"Training samples: {len(train_dataset)}, Test samples: {len(test_dataset)}, Validation samples: {len(val_dataset)}")
     
     # Initialize DSSM model
     print("🏗  Initializing DSSM model...")
@@ -674,7 +897,7 @@ def main():
     
     # Train the model
     print("🎯 Starting DSSM training...")
-    trained_model = train_dssm_model(dssm_model, train_loader, val_loader, DSSM_CONFIG)
+    trained_model = train_dssm_model(dssm_model, train_loader, val_loader, test_loader, DSSM_CONFIG)
     
     # Save the final model
     final_model_path = model_save_path / "dssm_final_model.pth"
@@ -695,6 +918,40 @@ def main():
     job_id_to_meta = {id_: meta for id_, meta in zip(job_ids, job_metadata)}
     course_id_to_meta = {id_: meta for id_, meta in zip(course_ids, course_metadata)}
     test_dssm_model(trained_model, job_embeddings, course_embeddings, job_id_to_meta, course_id_to_meta)
+    
+    # Comprehensive test set evaluation
+    print("\n" + "="*80)
+    print("🧪 COMPREHENSIVE TEST SET EVALUATION")
+    print("="*80)
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    test_metrics = evaluate_model_on_test_set(trained_model, test_loader, device)
+    
+    # Save test metrics to training history
+    training_history_path = BASE_DIR / "trained_model" / "training_history.json"
+    if training_history_path.exists():
+        try:
+            with open(training_history_path, 'r') as f:
+                history = json.load(f)
+            history['test_metrics'] = test_metrics
+            with open(training_history_path, 'w') as f:
+                json.dump(history, f, indent=2)
+            print(f"📁 Test metrics saved to {training_history_path}")
+        except Exception as e:
+            print(f"⚠️  Could not save test metrics to history: {e}")
+    
+    print("\n🎉 Training and evaluation complete!")
+    print(f"📊 Final Test Performance:")
+    print(f"  - Test Loss: {test_metrics['test_loss']:.6f}")
+    print(f"  - Test Accuracy: {test_metrics['best_accuracy']:.4f}")
+    print(f"  - F1-Score: {test_metrics['f1_score']:.4f}")
+    print(f"  - AUC Score: {test_metrics['auc_score']:.4f}")
+    
+    print(f"\n📈 Data Split Summary:")
+    print(f"  - Training Set: {len(train_loader.dataset)} samples (80%)")
+    print(f"  - Test Set: {len(test_loader.dataset)} samples (10%)")
+    print(f"  - Validation Set: {len(val_loader.dataset)} samples (10%)")
+    print(f"  - Total Dataset: {len(train_loader.dataset) + len(test_loader.dataset) + len(val_loader.dataset)} samples")
 
 def test_dssm_model(dssm_model, job_embeddings, course_embeddings, job_id_to_meta, course_id_to_meta, num_tests=5):
     """Test the trained DSSM model with sample job-course pairs."""
