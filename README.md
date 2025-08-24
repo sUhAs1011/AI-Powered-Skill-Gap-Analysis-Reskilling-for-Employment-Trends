@@ -42,6 +42,9 @@
 
 <img width="1018" height="421" alt="image" src="https://github.com/user-attachments/assets/a1037ba7-e0d1-40d0-a2bb-f68680daf771" />
 
+<img width="1062" height="264" alt="image" src="https://github.com/user-attachments/assets/497969e6-b205-4908-8259-aea7661b25aa" />
+
+
 
 ### Streamlit Interface
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/d3b9ffd3-2226-4016-8955-4e796a264877" />
