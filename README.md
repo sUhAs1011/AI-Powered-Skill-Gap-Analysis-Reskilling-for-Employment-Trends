@@ -40,6 +40,8 @@
  ### Model Training Results 
 <img width="3523" height="1768" alt="training_curves" src="https://github.com/user-attachments/assets/082c7879-5664-40b3-83a6-525d1789970f" />
 
+<img width="1018" height="421" alt="image" src="https://github.com/user-attachments/assets/a1037ba7-e0d1-40d0-a2bb-f68680daf771" />
+
 
 ### Streamlit Interface
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/d3b9ffd3-2226-4016-8955-4e796a264877" />
