@@ -32,7 +32,7 @@
 
 - model_training: This script trains a Deep Structured Semantic Model (DSSM) to refine job-course similarity. It uses embeddings from ChromaDB and generates a dataset of positive and negative pairs for training. The training process incorporates an Exponential Moving Average (EMA) and early stopping to save the best-performing model.
 
-- model_testing: A Streamlit web application that integrates the trained DSSM and ChromaDB. It analyzes user resumes, identifies skill gaps for desired jobs, and recommends relevant courses, leveraging both pre-computed mappings and DSSM insights.
+- model_testing: This script is a Streamlit web application that acts as the user interface. It analyzes a user's resume, identifies skill gaps for a desired job, and recommends relevant courses by leveraging either the pre-computed mappings or the trained DSSM model for deeper semantic matching.
 
 ### Architecture Diagram
 <img width="1581" height="685" alt="image" src="https://github.com/user-attachments/assets/41760cde-c598-4ba1-b64c-a1edd68e53cb" />
