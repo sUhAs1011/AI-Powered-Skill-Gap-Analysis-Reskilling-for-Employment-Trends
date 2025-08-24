@@ -24,7 +24,7 @@
 
 ### Implementation
 
-- eda_analysis: Analyzes raw job/course data, identifying missing values, performing dataset-specific insights, and conducting initial skill gap analysis via exact matching to inform preprocessing.
+- eda_analysis: This script analyzes raw job and course data, identifying missing values and key characteristics. It performs cross-dataset skill analysis to find common skills and highlight gaps between job requirements and course offerings.
 
 - data_processing: Cleans and standardizes raw data, handling missing values robustly and performing advanced skill normalization. It creates `combined_text` fields for embeddings and saves preprocessed files for later stages.
 
