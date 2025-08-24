@@ -26,8 +26,8 @@
 
 - eda_analysis: This script analyzes raw job and course data, identifying missing values and key characteristics. It performs cross-dataset skill analysis to find common skills and highlight gaps between job requirements and course offerings.
 
-- data_processing: Cleans and standardizes raw data, handling missing values robustly and performing advanced skill normalization. It creates `combined_text` fields for embeddings and saves preprocessed files for later stages.
-
+- data_processing: This script cleans and standardizes raw data, handling missing values and normalizing skill names to a canonical form. It also creates a combined text field for each job and course, which is essential for later embedding.
+  
 - populate_chromadb: Generates `all-MiniLM-L6-v2` embeddings for preprocessed jobs, courses, and individual skills, storing them in ChromaDB. It also creates initial job-to-course similarity mappings.
 
 - model_training: Trains a Deep Structured Semantic Model (DSSM) using ChromaDB embeddings, generating positive/negative pairs for contrastive learning. It employs CosineEmbeddingLoss, EMA(Exponential Moving Averaage) for validation, and early stopping to optimize and save the best model.
