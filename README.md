@@ -28,7 +28,7 @@
 
 - data_processing: This script cleans and standardizes raw data, handling missing values and normalizing skill names to a canonical form. It also creates a combined text field for each job and course, which is essential for later embedding.
   
-- populate_chromadb: Generates `all-MiniLM-L6-v2` embeddings for preprocessed jobs, courses, and individual skills, storing them in ChromaDB. It also creates initial job-to-course similarity mappings.
+- populate_chromadb: Generates This script converts the preprocessed text into vector embeddings using 'all-MiniLM-L6-v2' and populates a ChromaDB vector database with these embeddings. It also performs an initial job-to-course similarity mapping, saving the results to a JSON file.
 
 - model_training: Trains a Deep Structured Semantic Model (DSSM) using ChromaDB embeddings, generating positive/negative pairs for contrastive learning. It employs CosineEmbeddingLoss, EMA(Exponential Moving Averaage) for validation, and early stopping to optimize and save the best model.
 
