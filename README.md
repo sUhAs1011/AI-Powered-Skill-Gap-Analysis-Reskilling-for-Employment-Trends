@@ -24,15 +24,17 @@
 
 ### Implementation
 
-- eda_analysis: This script analyzes raw job and course data, identifying missing values and key characteristics. It performs cross-dataset skill analysis to find common skills and highlight gaps between job requirements and course offerings.
+- `eda_analysis`: This script analyzes raw job and course data, identifying missing values and key characteristics. It performs cross-dataset skill analysis to find common skills and highlight gaps between job requirements and course offerings.
 
-- data_processing: This script cleans and standardizes raw data, handling missing values and normalizing skill names to a canonical form. It also creates a combined text field for each job and course, which is essential for later embedding.
+- `data_processing`: This script cleans and standardizes raw data, handling missing values and normalizing skill names to a canonical form. It also creates a combined text field for each job and course, which is essential for later embedding.
   
-- populate_chromadb: Generates This script converts the preprocessed text into vector embeddings using 'all-MiniLM-L6-v2' and populates a ChromaDB vector database with these embeddings. It also performs an initial job-to-course similarity mapping, saving the results to a JSON file.
+- `populate_chromadb`: Generates This script converts the preprocessed text into vector embeddings using `all-MiniLM-L6-v2` and populates a ChromaDB vector database with these embeddings. It also performs an initial job-to-course similarity mapping, saving the results to a JSON file.
 
-- model_training: This script trains a Deep Structured Semantic Model (DSSM) to refine job-course similarity. It uses embeddings from ChromaDB and generates a dataset of positive and negative pairs for training. The training process incorporates an Exponential Moving Average (EMA) and early stopping to save the best-performing model.
+- `model_training`: This script trains a `Deep Structured Semantic Model (DSSM)` to refine job-course similarity. It uses embeddings from ChromaDB and generates a dataset of positive and negative pairs for training. The training process incorporates an `Exponential Moving Average (EMA)` and early stopping to save the best-performing model.
 
-- model_testing: This script is a Streamlit web application that acts as the user interface. It analyzes a user's resume, identifies skill gaps for a desired job, and recommends relevant courses by leveraging either the pre-computed mappings or the trained DSSM model for deeper semantic matching.
+- `model_testing`: This script is a Streamlit web application that acts as the user interface. It analyzes a user's resume, identifies skill gaps for a desired job, and recommends relevant courses by leveraging either the pre-computed mappings or the trained DSSM model for deeper semantic matching.
+
+- `utils`: The utils.py script serves as a central toolkit for the project, containing reusable helper functions that standardize and preprocess text and skills. It sets up Natural Language Processing (NLP) components from nltk and spacy for tasks like lemmatization and stop word removal. The script's core functionality revolves around a large `SKILL_NORMALIZATION_MAP` that maps common skill variations to a single, canonical form, ensuring consistency across all job and course data. This script is used by both data_processing.py and testing.py to clean and normalize text, extract skills, and perform semantic comparisons, ensuring that data is consistently formatted before it's used for model training or user interaction. 
 
 ### Architecture Diagram
 <img width="1581" height="685" alt="image" src="https://github.com/user-attachments/assets/41760cde-c598-4ba1-b64c-a1edd68e53cb" />
