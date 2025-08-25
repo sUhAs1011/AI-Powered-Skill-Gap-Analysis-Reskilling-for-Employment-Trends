@@ -37,7 +37,7 @@
 - `utils`: The utils.py script serves as a central toolkit for the project, containing reusable helper functions that standardize and preprocess text and skills. It sets up `Natural Language Processing (NLP)` components from nltk and spacy for tasks like lemmatization and stop word removal. The script's core functionality revolves around a large `SKILL_NORMALIZATION_MAP` that maps common skill variations to a single, canonical form, ensuring consistency across all job and course data. This script is used by both data_processing.py and testing.py to clean and normalize text, extract skills, and perform semantic comparisons, ensuring that data is consistently formatted before it's used for model training or user interaction. 
 
 ### Architecture Diagram
-<img width="1581" height="685" alt="image" src="https://github.com/user-attachments/assets/41760cde-c598-4ba1-b64c-a1edd68e53cb" />
+![WhatsApp Image 2025-08-25 at 17 08 29_c9deb4c6](https://github.com/user-attachments/assets/17cf07cb-a8ee-498a-a080-66e6e984af04)
 
  ### Model Training Results 
 <img width="3523" height="1768" alt="training_curves" src="https://github.com/user-attachments/assets/082c7879-5664-40b3-83a6-525d1789970f" />
