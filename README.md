@@ -42,6 +42,9 @@
  ### Model Training Results 
 <img width="3552" height="1768" alt="training_curves" src="https://github.com/user-attachments/assets/be045287-41da-4112-9e65-afe22c77c6c9" />
 
+<img width="2370" height="570" alt="metrics_table" src="https://github.com/user-attachments/assets/bc2bb0d4-f157-4423-94e6-c9f00f5f8dc7" />
+
+
 <img width="751" height="249" alt="image" src="https://github.com/user-attachments/assets/25ef7862-cebd-44f3-8821-925d897031a6" />
 
 <img width="867" height="290" alt="image" src="https://github.com/user-attachments/assets/36217c5e-c20a-4422-b30e-78a515bf21f0" />
