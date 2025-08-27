@@ -655,6 +655,55 @@ def plot_training_curves(train_losses, val_losses, test_losses, save_path=None):
     except Exception as e:
         print(f"Error plotting training curves: {e}")
 
+def plot_metrics_table(rows, save_path):
+    """Render a metrics table image using Matplotlib.
+
+    rows should be a list of dicts with keys:
+      model, moverscore, precision, recall, f1
+    """
+    try:
+        import matplotlib.pyplot as plt
+        from matplotlib.table import Table
+
+        columns = ["Model", "MoverScore", "Precision", "Recall", "F1 Score"]
+        fig, ax = plt.subplots(figsize=(8, max(2, 0.6 * (len(rows) + 1))))
+        ax.axis('off')
+
+        table = Table(ax, bbox=[0, 0, 1, 1])
+
+        n_rows = len(rows) + 1
+        n_cols = len(columns)
+
+        col_width = 1.0 / n_cols
+        row_height = 1.0 / n_rows
+
+        # Header
+        for j, col in enumerate(columns):
+            table.add_cell(0, j, width=col_width, height=row_height, text=col, loc='center', facecolor="#e6e6e6")
+
+        # Rows
+        for i, r in enumerate(rows, start=1):
+            values = [
+                str(r.get('model', '')),
+                f"{r.get('moverscore', float('nan')):.4f}" if isinstance(r.get('moverscore'), (int, float)) else (r.get('moverscore') or "NA"),
+                f"{r.get('precision', 0.0):.4f}",
+                f"{r.get('recall', 0.0):.4f}",
+                f"{r.get('f1', 0.0):.4f}",
+            ]
+            for j, val in enumerate(values):
+                table.add_cell(i, j, width=col_width, height=row_height, text=val, loc='center', facecolor='white')
+
+        # Add table to axes
+        ax.add_table(table)
+        fig.tight_layout()
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f"📊 Metrics table saved to {save_path}")
+    except ImportError:
+        print("📊 Matplotlib not available - skipping metrics table plot")
+    except Exception as e:
+        print(f"Error plotting metrics table: {e}")
+
 def create_training_examples_from_metadata(metadatas: List[Dict[str, Any]]) -> List[InputExample]:
     """Create training examples from ChromaDB metadata."""
     train_examples = []
@@ -952,6 +1001,21 @@ def main():
     print(f"  - Test Set: {len(test_loader.dataset)} samples (10%)")
     print(f"  - Validation Set: {len(val_loader.dataset)} samples (10%)")
     print(f"  - Total Dataset: {len(train_loader.dataset) + len(test_loader.dataset) + len(val_loader.dataset)} samples")
+    
+    # --- Save metrics table figure ---
+    try:
+        metrics_table_path = BASE_DIR / "trained_model" / "metrics_table.png"
+        plot_metrics_table([
+            {
+                'model': 'DSSM',
+                'moverscore': float('nan'),
+                'precision': test_metrics['precision'],
+                'recall': test_metrics['recall'],
+                'f1': test_metrics['f1_score'],
+            }
+        ], save_path=metrics_table_path)
+    except Exception as e:
+        print(f"⚠️  Could not save metrics table: {e}")
 
 def test_dssm_model(dssm_model, job_embeddings, course_embeddings, job_id_to_meta, course_id_to_meta, num_tests=5):
     """Test the trained DSSM model with sample job-course pairs."""
