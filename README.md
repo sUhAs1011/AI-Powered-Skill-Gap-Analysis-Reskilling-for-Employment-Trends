@@ -40,7 +40,7 @@
 ![WhatsApp Image 2025-08-25 at 17 08 29_c9deb4c6](https://github.com/user-attachments/assets/17cf07cb-a8ee-498a-a080-66e6e984af04)
 
  ### Model Training Results 
-<img width="3523" height="1768" alt="training_curves" src="https://github.com/user-attachments/assets/082c7879-5664-40b3-83a6-525d1789970f" />
+<img width="3552" height="1768" alt="training_curves" src="https://github.com/user-attachments/assets/be045287-41da-4112-9e65-afe22c77c6c9" />
 
 <img width="1018" height="421" alt="image" src="https://github.com/user-attachments/assets/a1037ba7-e0d1-40d0-a2bb-f68680daf771" />
 
