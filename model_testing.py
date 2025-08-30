@@ -186,7 +186,9 @@ def is_resume_content(text):
         'employment history', 'education', 'skills', 'qualifications', 'certifications',
         'professional experience', 'career objective', 'summary of qualifications',
         'technical skills', 'professional skills', 'work history', 'job experience',
-        'professional background', 'career summary', 'employment record'
+        'professional background', 'career summary', 'employment record',
+        'experience', 'work', 'employment', 'career', 'professional', 'job', 'position',
+        'role', 'responsibilities', 'achievements', 'accomplishments', 'duties'
     ]
     
     # Check if any resume indicators are present
@@ -227,25 +229,35 @@ def is_resume_content(text):
     has_projects = any(pattern in text_lower for pattern in ['project', 'portfolio', 'achievement', 'accomplishment', 'deliverable'])
     if has_projects: score += 1
     
+    # Check for achievements and accomplishments
+    has_achievements = any(pattern in text_lower for pattern in ['achievement', 'accomplishment', 'result', 'outcome', 'impact', 'contribution'])
+    if has_achievements: score += 1
+    
+    # Check for responsibilities and duties
+    has_responsibilities = any(pattern in text_lower for pattern in ['responsibility', 'duty', 'task', 'function', 'role', 'position'])
+    if has_responsibilities: score += 1
+    
     # Ensure score doesn't exceed maximum
     score = min(score, 10)
     
     # Check for irrelevant content that suggests it's not a resume
+    # Only flag very specific non-resume content patterns
     irrelevant_patterns = [
         'recipe', 'cooking', 'food', 'restaurant', 'menu', 'ingredients', 'instructions',
         'novel', 'story', 'fiction', 'chapter', 'book', 'literature',
         'research paper', 'academic paper', 'thesis', 'dissertation',
-        'invoice', 'receipt', 'bill', 'financial statement',
-        'form', 'application', 'contract', 'legal document'
+        'invoice', 'receipt', 'bill', 'financial statement'
+        # Removed overly broad patterns like 'form', 'application', 'contract', 'legal document'
+        # as these can appear in legitimate resumes
     ]
     
-    # Only flag if multiple irrelevant patterns are found (more lenient)
+    # Only flag if multiple very specific irrelevant patterns are found
     irrelevant_count = sum(1 for pattern in irrelevant_patterns if pattern in text_lower)
-    has_irrelevant_content = irrelevant_count >= 2  # Need at least 2 patterns to be considered irrelevant
+    has_irrelevant_content = irrelevant_count >= 3  # Increased threshold to 3 for more leniency
     
-    # Final validation
-    if has_irrelevant_content:
-        return False, f"Document appears to contain non-resume content (found {irrelevant_count} irrelevant patterns)"
+    # Final validation - be more lenient with irrelevant content if we have strong resume indicators
+    if has_irrelevant_content and score < 7:  # Only reject if low score AND has irrelevant content
+        return False, f"Document appears to contain non-resume content (found {irrelevant_count} irrelevant patterns) and lacks sufficient resume indicators (score: {score}/10)"
     
     # Additional check: ensure there's enough professional content - more efficient
     professional_words = ['experience', 'skills', 'education', 'work', 'employment', 'career', 'professional', 'job', 'position', 'role', 'project', 'technology', 'development', 'management', 'analysis']
@@ -258,8 +270,8 @@ def is_resume_content(text):
     if professional_word_count < 2:  # Reduced from 3 to 2
         return False, f"Document lacks sufficient professional content (found {professional_word_count} professional terms). Please upload a proper resume."
     
-    # Score requirement for 10-point scale
-    if score >= 5:  # Need at least 5/10 to pass
+    # Score requirement for 10-point scale - reduced threshold for better acceptance
+    if score >= 4:  # Reduced from 5 to 4 for more leniency
         return True, f"Resume validation passed (score: {score}/10, professional terms: {professional_word_count})"
     else:
         return False, f"Document doesn't appear to be a resume (score: {score}/10). Please upload a proper resume document."
@@ -759,6 +771,18 @@ Welcome to Career Copilot! This tool helps you bridge the gap between your curre
 2.  **Enter a job title** you're interested in
 3.  We'll analyze your skills, identify gaps, and recommend relevant courses
 
+**📋 Resume Requirements:**
+- Must contain **work experience** or employment history
+- Should include **education** background and **skills**
+- Must be a **completed resume**, not a template or form
+- Should have **professional content** (career-related, not personal documents)
+
+**💡 Tips for Success:**
+- Upload your **actual completed resume** with real work experience
+- Ensure it contains **specific skills** and **job responsibilities**
+- Avoid blank templates or application forms
+- Use PDF or DOCX format for best results
+
 **Important:** Only upload actual resume documents containing work experience, education, and skills. Other documents will be rejected.
 """)
 
@@ -807,10 +831,26 @@ with st.sidebar:
     - Should contain contact information
     - Minimum 100 characters of text
     
+    **Common Resume Sections:**
+    - Professional Summary/Objective
+    - Work Experience/Employment History
+    - Education & Certifications
+    - Skills (Technical & Soft Skills)
+    - Projects & Achievements
+    
     **File Format Support:**
     - **PDF/DOCX**: Best support, text extraction works reliably
     - **Images (PNG/JPG)**: Requires Tesseract OCR installation
     - **Scanned PDFs**: OCR recommended for better accuracy
+    """)
+    
+    # Additional help for validation issues
+    st.warning("""
+    **If your resume is rejected:**
+    1. Ensure it contains actual work experience and skills
+    2. Check that it's not a template or form
+    3. Make sure it has professional content (not recipes, stories, etc.)
+    4. Try expanding the Debug section below to see scoring details
     """)
     
     # Job Title Input
@@ -963,18 +1003,78 @@ if analyze_button and resume_file and job_title_input:
                 score += 1
                 st.write(f"- Project experience: +1 point (Total: {score})")
             
+            # New scoring criteria
+            has_achievements = any(pattern in text_lower for pattern in ['achievement', 'accomplishment', 'result', 'outcome', 'impact', 'contribution'])
+            if has_achievements: 
+                score += 1
+                st.write(f"- Achievements: +1 point (Total: {score})")
+            
+            has_responsibilities = any(pattern in text_lower for pattern in ['responsibility', 'duty', 'task', 'function', 'role', 'position'])
+            if has_responsibilities: 
+                score += 1
+                st.write(f"- Responsibilities: +1 point (Total: {score})")
+            
             st.write(f"**Final Score: {score}/10**")
+            
+            # Show what patterns were flagged as irrelevant
+            irrelevant_patterns = [
+                'recipe', 'cooking', 'food', 'restaurant', 'menu', 'ingredients', 'instructions',
+                'novel', 'story', 'fiction', 'chapter', 'book', 'literature',
+                'research paper', 'academic paper', 'thesis', 'dissertation',
+                'invoice', 'receipt', 'bill', 'financial statement'
+            ]
+            found_irrelevant = [pattern for pattern in irrelevant_patterns if pattern in text_lower]
+            if found_irrelevant:
+                st.write(f"**⚠️ Irrelevant patterns found:** {found_irrelevant}")
+                st.write("These patterns suggest non-resume content, but may be false positives.")
+            else:
+                st.write("**✅ No irrelevant patterns found**")
         
         if not is_valid_resume:
-            st.error("❌ *Invalid Document*")
+            st.error("❌ *Resume Validation Failed*")
             st.warning(validation_message)
+            
+            # Provide more helpful guidance
             st.markdown("""
-            **Please upload a proper resume document that contains:**
-            - Work experience or employment history
-            - Education background
-            - Skills and qualifications
-            - Contact information
+            **🔍 What went wrong?**
+            The document you uploaded doesn't appear to be a professional resume.
+            
+            **📋 What we're looking for:**
+            - **Work Experience**: Job titles, companies, dates, responsibilities
+            - **Education**: Degrees, schools, graduation dates
+            - **Skills**: Technical skills, software, tools, languages
+            - **Professional Content**: Career-related information, not personal documents
+            
+            **💡 How to fix this:**
+            1. **Upload your actual resume** (not a template or form)
+            2. **Ensure it contains work history** and professional skills
+            3. **Check the Debug section above** to see detailed scoring
+            4. **Try a different resume file** if you have multiple versions
+            
+            **📄 Good resume examples:**
+            - Professional CV with work experience
+            - Resume with skills and employment history
+            - Document showing your career background
             """)
+            
+            # Show common issues
+            with st.expander("🚫 Common Issues & Solutions"):
+                st.markdown("""
+                **❌ Document Types That Won't Work:**
+                - Job application forms
+                - Blank resume templates
+                - Personal letters or stories
+                - Recipes or cooking instructions
+                - Academic papers or research
+                - Financial documents or invoices
+                
+                **✅ Document Types That Work:**
+                - Completed professional resumes
+                - CVs with work experience
+                - Career summaries with skills
+                - Professional profiles
+                """)
+            
             st.stop()
         
         # Show validation success
